@@ -2,15 +2,18 @@
   "name": "thrifting",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/{index.js,functions/*.js}",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "start:functions": "func start",
+    "test": "echo \"No tests yet...\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@azure/functions": "^4.0.0",
     "axios": "^1.13.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",

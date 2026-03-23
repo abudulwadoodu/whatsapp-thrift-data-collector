@@ -45,16 +45,19 @@ The app uses **OAuth** so uploads go to **your** Google Drive (no service accoun
 
 ## Environment Variables
 - `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`, `VERIFY_TOKEN`: From Meta for Developers (WhatsApp).
+- `WHATSAPP_GRAPH_VERSION`: (Optional) Graph API version for media calls (default `v18.0`).
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: From Google Cloud Console → APIs & credentials → OAuth 2.0.
 - `GOOGLE_REFRESH_TOKEN`: Obtained by running `node scripts/auth-google.js` and adding the printed line to `.env`.
 - `GOOGLE_DRIVE_FOLDER_ID`: The Drive folder ID where images will be saved (folder in your own Drive).
 - `GOOGLE_SHEET_ID`: The Google Sheet ID.
 - `GOOGLE_SHEET_NAME`: (Optional) Sheet tab name; default is `Sheet1`.
+- `LOG_LEVEL`: Logging verbosity for both local and Azure Functions (`error`, `warn`, `info`, `debug`; default `info`).
+- `WHATSAPP_DEBUG`: (Optional) Set `true` to include detailed WhatsApp API diagnostics in logs.
 
 **Sheet layout:** Column A (Sl #) is for your formulas; the app appends **B:K**: Order #, Product Image path, Title, Description, Price, Location, Category, Contact Name, Contact #, Timestamp. Set `GOOGLE_SHEET_NAME` to your sheet tab (e.g. `ThriftItems`). Optional: `GOOGLE_DRIVE_IMAGE_PATH_PREFIX=Thrifting_Images` for the Product Image path.
 
-## Running Locally with ngrok
-1. Start the server: `node src/server.js` (runs on port 3000 by default).
+## Running Locally with ngrok (Express)
+1. Start the server: `npm start` (runs on port 3000 by default).
 2. Start ngrok: `ngrok http 3000`.
 3. Copy the ngrok URL (e.g., `https://random-id.ngrok-free.app`).
 4. In Meta for Developers, go to **WhatsApp > Configuration**:
@@ -69,3 +72,33 @@ The app uses **OAuth** so uploads go to **your** Google Drive (no service accoun
 4. Verify the new row in Google Sheets (timestamp, phone, caption, drive link, product title, labels).
 
 **Note:** Enable the [Cloud Vision API](https://console.cloud.google.com/apis/library/vision.googleapis.com) for your Google Cloud project so label detection and title generation work.
+
+## Running as Azure Functions (Native)
+This project now supports native Azure Functions handlers in `src/functions/webhook.js` while keeping Express for local development.
+
+1. Install Azure Functions Core Tools v4.
+2. Run locally with Functions runtime:
+   - `npm install`
+   - `npm run start:functions`
+3. Test endpoints:
+   - `GET http://localhost:7071/api/webhook?...` for verification
+   - `POST http://localhost:7071/api/webhook` for webhook events
+4. In Meta, set callback URL to your deployed Function endpoint:
+   - `https://<your-function-app>.azurewebsites.net/api/webhook`
+
+### Deploy to Azure Function App
+- Create or reuse a Node.js Function App (runtime v4).
+- Configure app settings with the same keys from `.env` (`WHATSAPP_TOKEN`, `VERIFY_TOKEN`, Google OAuth and IDs, etc.).
+- Deploy with your preferred method:
+  - VS Code Azure extension (Deploy to Function App)
+  - Azure CLI / Functions Core Tools publish
+  - GitHub Actions CI/CD
+
+### Troubleshooting Logs in App Insights
+- Azure Functions writes reliably to App Insights when logs flow through `context.log`/`context.error`.
+- This app now routes handler/service logs through a context-aware logger during Function execution.
+- To debug WhatsApp API failures in production:
+  - Set `LOG_LEVEL=debug` or `WHATSAPP_DEBUG=true` in Function App settings.
+  - Reproduce the webhook call.
+  - Inspect App Insights traces for `code`, `error_subcode`, `type`, and `fbtrace_id`.
+- Turn debug back off after incident handling to reduce noisy logs.

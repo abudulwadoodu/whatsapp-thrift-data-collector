@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const { getAuthenticatedClient } = require('../config/googleOAuth');
+const { createLogger } = require('../utils/logger');
 
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
 
@@ -25,7 +26,8 @@ const SHEET_NAME = process.env.GOOGLE_SHEET_NAME || 'Sheet1';
  * H=Category, I=Contact Name, J=Contact #, K=Timestamp
  * @param {Array} values - Row data [orderNo, productImagePath, title, description, price, location, category, contactName, contactNo, timestamp]
  */
-async function appendToSheet(values) {
+async function appendToSheet(values, log) {
+    const logger = log && log.info ? log : createLogger(log);
     try {
         const client = await getSheets();
         const rangeColB = `${SHEET_NAME}!B:B`;
@@ -46,10 +48,13 @@ async function appendToSheet(values) {
                 values: [values]
             }
         });
-        console.log(`Row appended to Sheets (row ${nextRow}, B:K only): ${response.data.updatedCells ?? 'OK'}`);
+        logger.info('Row appended to Sheets', {
+            row: nextRow,
+            updatedCells: response.data.updatedCells ?? 'OK'
+        });
         return response.data;
     } catch (error) {
-        console.error('Error appending to Sheets:', error.message);
+        logger.error('Error appending to Sheets', { message: error.message, status: error.response?.status });
         throw new Error('Failed to log data to Google Sheets');
     }
 }
