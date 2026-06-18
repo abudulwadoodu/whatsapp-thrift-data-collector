@@ -51,10 +51,16 @@ The app uses **OAuth** so uploads go to **your** Google Drive (no service accoun
 - `GOOGLE_DRIVE_FOLDER_ID`: The Drive folder ID where images will be saved (folder in your own Drive).
 - `GOOGLE_SHEET_ID`: The Google Sheet ID.
 - `GOOGLE_SHEET_NAME`: (Optional) Sheet tab name; default is `Sheet1`.
+- `GOOGLE_EVENTS_SHEET_NAME`: (Optional) reliability tab for webhook events; default `WebhookEvents`.
 - `LOG_LEVEL`: Logging verbosity for both local and Azure Functions (`error`, `warn`, `info`, `debug`; default `info`).
 - `WHATSAPP_DEBUG`: (Optional) Set `true` to include detailed WhatsApp API diagnostics in logs.
+- `WHATSAPP_DAILY_LIMIT`: (Optional) max submissions per phone/day (default `10`).
 
 **Sheet layout:** Column A (Sl #) is for your formulas; the app appends **B:K**: Order #, Product Image path, Title, Description, Price, Location, Category, Contact Name, Contact #, Timestamp. Set `GOOGLE_SHEET_NAME` to your sheet tab (e.g. `ThriftItems`). Optional: `GOOGLE_DRIVE_IMAGE_PATH_PREFIX=Thrifting_Images` for the Product Image path.
+
+**Events tab layout (`GOOGLE_EVENTS_SHEET_NAME`):**
+`message_id`, `phone_number`, `image_url`, `description`, `timestamp`, `status`
+where `status` transitions as `pending -> processed` (or `failed` on error).
 
 ## Running Locally with ngrok (Express)
 1. Start the server: `npm start` (runs on port 3000 by default).
@@ -97,6 +103,9 @@ This project now supports native Azure Functions handlers in `src/functions/webh
 ### Troubleshooting Logs in App Insights
 - Azure Functions writes reliably to App Insights when logs flow through `context.log`/`context.error`.
 - This app now routes handler/service logs through a context-aware logger during Function execution.
+- Webhook POST now acknowledges immediately (`200`) and runs processing in background to avoid timeouts.
+- Processing pipeline logs key steps with metadata (`message_id`, `phone_number`): `received`, `validated`, `download`, `vision`, `upload`, `sheet_update`, `completed`.
+- Reliability protections include deduplication, retry (`3` attempts with delay), and per-phone daily rate limiting.
 - To debug WhatsApp API failures in production:
   - Set `LOG_LEVEL=debug` or `WHATSAPP_DEBUG=true` in Function App settings.
   - Reproduce the webhook call.

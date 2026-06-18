@@ -21,11 +21,13 @@ router.get('/', (req, res) => {
  */
 router.post('/', async (req, res) => {
     try {
-        const result = await processWebhookEvent(req.body);
-        res.sendStatus(result.status);
+        processWebhookEvent(req.body).catch((error) => {
+            console.error('Background webhook processing failed:', error.message);
+        });
+        res.sendStatus(200);
     } catch (error) {
         console.error('Error handling webhook:', error.message);
-        res.sendStatus(500);
+        res.sendStatus(200);
     }
 });
 

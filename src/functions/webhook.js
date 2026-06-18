@@ -31,11 +31,13 @@ app.http('webhook-events', {
         const logger = createLogger(context);
         try {
             const body = await request.json();
-            const result = await processWebhookEvent(body, logger);
-            return { status: result.status };
+            processWebhookEvent(body, logger).catch((error) => {
+                logger.error('Background webhook processing failed', { message: error.message });
+            });
+            return { status: 200 };
         } catch (error) {
             logger.error('Error handling webhook', { message: error.message });
-            return { status: 500 };
+            return { status: 200 };
         }
     },
 });
